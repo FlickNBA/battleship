@@ -10,6 +10,7 @@ module.exports = {
     static: "./dist",
     devMiddleware: { writeToDisk: true },
   },
+  devtool: "inline-source-map",
   plugins: [
     new HtmlWebpackPlugin({
       title: "FNBA",

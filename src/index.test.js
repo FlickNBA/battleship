@@ -123,3 +123,25 @@ test("7x7 board, big test with X and Y", () => {
   expect(board.placeShip("3-3", "y", 3, player)).not.toBe(false);
   expect(board.placeShip("2-7", "y", 5, player)).not.toBe(false);
 });
+
+test("CAN 2 PLAYERS PUT SHIPS ON THE SAME TILE? 7x7 board, big test with X and Y", () => {
+  let board = new Gameboard(7);
+  let player = new Player("Flick");
+  let enemy = new Player("Enemy");
+  expect(board.placeShip("1-2", "x", 5, player)).not.toBe(false);
+  expect(board.placeShip("1-4", "x", 3, enemy)).not.toBe(false);
+  expect(board.placeShip("3-2", "y", 2, player)).not.toBe(false);
+  expect(board.placeShip("3-3", "y", 4, enemy)).not.toBe(false);
+});
+
+test("CAN 2 PLAYERS PUT SHIPS ON THE SAME TILE BUT THEY CAN'T PUT ANOTHER SHIP ON THEIR OWN 7x7 board, big test with X and Y", () => {
+  let board = new Gameboard(7);
+  let player = new Player("Flick");
+  let enemy = new Player("Enemy");
+  expect(board.placeShip("1-2", "x", 5, player)).not.toBe(false);
+  expect(board.placeShip("1-4", "x", 3, player)).toBe(false);
+  expect(board.placeShip("1-4", "x", 3, enemy)).not.toBe(false);
+  expect(board.placeShip("3-2", "y", 2, player)).not.toBe(false);
+  expect(board.placeShip("3-3", "y", 4, enemy)).not.toBe(false);
+  expect(board.placeShip("3-3", "y", 2, enemy)).toBe(false);
+});

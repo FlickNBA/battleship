@@ -1,5 +1,6 @@
 import { Ship } from "./Ship";
-import { Player } from "./Player";
+import { drawAttack } from "./DOM";
+import { drawShips2 } from "./initBoard";
 
 class Tile {
   constructor(coordinates, status = []) {
@@ -17,7 +18,141 @@ export class Gameboard {
     this.players = [];
   }
 
-  addPlayer(player) {
+  placeShips(n, index) {
+    let shipNames = ["Boat", "Scooter", "Shark", "Bike", "Fish", "Tank"];
+    let shipLength = [2, 4, 3, 4, 2, 3];
+    for (let i = 0; i < n; i++) {
+      let axis = i % 2 == 0 ? "x" : "y";
+      let canPlace = false;
+      while (!canPlace) {
+        console.log("xD");
+        let randomTile = this.board[Math.floor(this.board.length * Math.random())].coordinates;
+        let can = this.checkIfCanPlaceShip(randomTile, axis, shipLength[i], this.players[index]);
+        console.log(can);
+        if (can != false) {
+          canPlace = true;
+          this.placeShip(randomTile, axis, shipLength[i], this.players[index], shipNames[i]);
+        }
+      }
+    }
+  }
+
+  botShoot() {
+    console.log(this.players[1].possibleHits);
+    let randomHit = this.players[1].possibleHits[Math.floor(this.players[1].possibleHits.length * Math.random())];
+    this.receiveAttack(randomHit.coordinates, this.players[1]);
+    this.updateShipsAlive();
+    this.players[1].possibleHits.splice(this.players[1].possibleHits.indexOf(randomHit), 1);
+  }
+
+  shootButton(e, p) {
+    // console.log(board.receiveAttack("1-1", player));
+    let coordinates;
+    if (e.target.className != "") {
+      coordinates = e.target.offsetParent.id.split("-").splice(1).join("-");
+    } else {
+      coordinates = e.target.id.split("-").splice(1).join("-");
+    }
+    let canHit = this.players[0].possibleHits.find((r) => r.coordinates == coordinates);
+    //console.log("can hit", canHit);
+    if (canHit) {
+      console.log(e.target);
+      this.receiveAttack(coordinates, p);
+      this.players[0].possibleHits.splice(this.players[0].possibleHits.indexOf(this.players[0].possibleHits.find((r) => r.coordinates == coordinates)), 1);
+      this.updateShipsAlive();
+      this.botShoot();
+    }
+  }
+
+  endGame(winner, shipsLeft, loser) {
+    setTimeout(() => {
+      document.querySelector("#main").style["transition-duration"] = "1000ms";
+      document.querySelector("#main").style.opacity = 0;
+      if (shipsLeft == 777) {
+        document.querySelector("#winner").innerHTML = `${winner.name} tied against ${loser.name}!`;
+      } else {
+        document.querySelector("#winner").innerHTML = `${winner.name} won against ${loser.name} with ${shipsLeft} ships left!`;
+      }
+    }, 500);
+  }
+
+  placeShipButton(e, p) {
+    // console.log(e);
+    // console.log(p);
+    if (p.ships.length < 4) {
+      let coordinates = e.target.id.split("-").splice(1).join("-");
+      let axis = document.querySelector("#axis").value.split(", ")[0];
+      let name = document.querySelector("#axis").value.split(", ")[1];
+      let length = Number(document.querySelector("#axis").value.split(", ")[2]);
+      let ship = this.placeShip(coordinates, axis, length, p, name);
+      if (ship == false) {
+        alert("You made a mistake, make sure to double-check.");
+      }
+      document.querySelector("#turn").innerText = `${this.players[0].name}'s turn to place ship (${this.players[0].ships.length}/4 ships)`;
+      this.bothPlayersReady();
+    } else {
+      console.log("You have maximum amount of ships");
+    }
+  }
+
+  updateShipsAlive() {
+    let playerShips = this.players[0].ships.reduce((accumulator, value) => {
+      if (!value.isSunk) accumulator++;
+      return accumulator;
+    }, 0);
+    document.querySelector(".player").innerText = `${this.players[0].name} => ${playerShips}/6 ships alive.`;
+    let botShips = this.players[1].ships.reduce((accumulator, value) => {
+      if (!value.isSunk) accumulator++;
+      return accumulator;
+    }, 0);
+    document.querySelector(".enemy").innerText = `${this.players[1].name} => ${botShips}/6 ships alive.`;
+
+    if (playerShips == 0 && botShips == 0) {
+      this.endGame(this.players[1], 777, this.players[2]);
+    } else if (playerShips == 0) {
+      this.endGame(this.players[1], botShips, this.players[0]);
+    } else if (botShips == 0) {
+      this.endGame(this.players[0], playerShips, this.players[1]);
+    }
+  }
+
+  bothPlayersReady() {
+    if (this.players[0].ships.length + this.players[1].ships.length == 12) {
+      document.querySelector("#turn").innerText = `${this.players[0].name}'s turn to shoot`;
+      document.querySelector("#axis").style.display = "none";
+
+      document.querySelectorAll("#player > div").forEach((playerTile) => {
+        playerTile.classList.add("disabled");
+      });
+
+      document.querySelectorAll("#enemy > div").forEach((enemyTile) => {
+        enemyTile.addEventListener("click", (event) => {
+          this.shootButton(event, this.players[0]);
+        });
+      });
+
+      this.updateShipsAlive();
+    }
+  }
+
+  startGame() {
+    document.querySelectorAll("#player > div").forEach((playerTile) => {
+      playerTile.addEventListener("click", (event) => {
+        this.placeShipButton(event, this.players[0]);
+      });
+    });
+
+    this.placeShips(6, 0);
+
+    this.placeShips(6, 1);
+
+    this.bothPlayersReady();
+
+    //document.querySelector("#turn").innerText = `${this.players[0].name}'s turn to place ship (${this.players[0].ships.length}/4 ships)`;
+  }
+
+  addPlayer(player, id) {
+    player.possibleHits = JSON.parse(JSON.stringify(this.board));
     this.players.push(player);
   }
 
@@ -111,42 +246,36 @@ export class Gameboard {
   }
 
   placeShip(coordinates, axis, length, player, name = "Ship") {
+    let index = player.id == "player" ? 0 : 1;
     let check = this.checkIfCanPlaceShip(coordinates, axis, length, player);
     if (check) {
       let ship = new Ship(check, length, player, name);
       player.addShip(ship);
       console.log(check);
       check.forEach((c) => c.status.push(ship));
+      drawShips2(this.board, player);
       return ship;
     } else {
       return false;
     }
   }
 
-  // placeShip(coordinates, axis, length, player) {
-  //   let check = this.checkIfCanPlaceShip(coordinates, axis, length, player);
-  //   if (check) {
-  //     let ship = new Ship(coordinates, length, player);
-  //     player.addShip(ship);
-  //     check.forEach((c) => c.status.push(ship));
-  //     return ship;
-  //   } else {
-  //     return false;
-  //   }
-  // }
-
   receiveAttack(coordinates, player) {
     // CODES: 1 => attack hit enemy, 2 = attack missed, 3 = attacked your own, 4 = already attacked, 5 = attack hit and sunk enemy
+    console.log(coordinates);
     let tile = this.board.find((t) => t.coordinates == coordinates);
-    let statusEmpty = tile.status == "";
+    //console.log(tile.status.length);
+    //let statusEmpty = tile.status == "";
+    console.log(this.board);
+    console.log(tile);
+    let statusEmpty = tile.status.length == 0;
     let attackedAlready = tile.attackedBy.includes(player);
-    // console.log("status empty: ", statusEmpty);
-    // console.log("attacked by player: ", attackedAlready);
     if (attackedAlready) {
       return 4;
     } else {
       if (statusEmpty) {
         tile.attackedBy.push(player);
+        drawAttack(coordinates, player, 2);
         return 2;
       } else {
         let howManyShips = tile.status.length;
@@ -154,61 +283,27 @@ export class Gameboard {
           let enemyShip = tile.status.find((s) => s.owner != player);
           enemyShip.hit();
           tile.attackedBy.push(player);
+          drawAttack(coordinates, player, enemyShip.isSunk ? 5 : 1);
           return enemyShip.isSunk ? 5 : 1;
         } else {
           let hitMyOwn = tile.status[0].owner == player;
           // console.log("hit my own?", hitMyOwn);
           if (hitMyOwn) {
+            drawAttack(coordinates, player, 3);
             return 3;
           } else {
             tile.status[0].hit();
             tile.attackedBy.push(player);
-            return tile.status.isSunk ? 5 : 1;
+            drawAttack(coordinates, player, tile.status[0].isSunk ? 5 : 1);
+            return tile.status[0].isSunk ? 5 : 1;
           }
         }
       }
     }
-    // if (tile.attackedBy.includes(player)) {
-    //   return 4;
-    // } else if (tile.status) {
-    //   if (player == tile.status.owner) {
-    //     return 3;
-    //   } else {
-    //     tile.attackedBy.push(player);
-    //     console.log(tile);
-    //     tile.status.hit();
-    //     return tile.status.isSunk ? 5 : 1;
-    //   }
-    // } else {
-    //   tile.attackedBy.push(player);
-    //   return 2;
-    // }
   }
-
-  // receiveAttack(coordinates, player) {
-  //   // CODES: 1 => attack hit enemy, 2 = attack missed, 3 = attacked your own, 4 = already attacked, 5 = attack hit and sunk enemy
-  //   let tile = this.board.find((t) => t.coordinates == coordinates);
-  //   console.log(tile);
-  //   if (tile.attackedBy.includes(player)) {
-  //     return 4;
-  //   } else if (tile.status) {
-  //     if (player == tile.status.owner) {
-  //       return 3;
-  //     } else {
-  //       tile.attackedBy.push(player);
-  //       console.log(tile.status);
-  //       //tile.status.hit();
-  //       return tile.status.isSunk ? 5 : 1;
-  //     }
-  //   } else {
-  //     tile.attackedBy.push(player);
-  //     return 2;
-  //   }
-  // }
 
   printAttackResult(attacker, enemy, code) {
     // CODES: 1 => attack hit enemy, 2 = attack missed, 3 = attacked your own, 4 = already attacked, 5 = attack hit and sunk enemy
-
     switch (code) {
       case 1:
         return `${attacker.name} hit ${enemy.name} ship.`;

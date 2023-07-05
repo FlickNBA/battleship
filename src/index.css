@@ -37,6 +37,11 @@ h1 {
     font-size: 1rem;
     cursor: pointer;
     color: rgba(0, 0, 0, 0.5);
+    position: relative;
+}
+
+#enemy > div {
+    color: rgba(0, 0, 0, 0.025);
 }
 
 .player {
@@ -45,4 +50,53 @@ h1 {
 
 .enemy {
     color: red;
+}
+
+.border-player {
+    border: 2px solid green;
+}
+
+.border-enemy {
+    border: 2px solid red;
+}
+
+.hit {
+    background-color: rgba(255, 165, 0, 0.75);
+}
+
+.missed {
+    background-color: rgba(51, 51, 51, 0.5);
+}
+
+.sunk {
+    background-color: rgba(255, 0, 0, 0.75);
+    transform: scale(1.5);
+}
+
+.dot {
+    width: 40%;
+    height: 40%;
+    border-radius: 100%;
+    position: absolute;
+}
+
+#top {
+    display: none;
+    margin-bottom: 1rem;
+    width: 100%;
+    justify-content: center;
+}
+
+#top input {
+    margin-left: 1rem;
+    width: 33%;
+    text-align: center;
+}
+
+.disabled {
+    pointer-events: none;
+}
+
+#winner {
+    position: absolute;
 }
